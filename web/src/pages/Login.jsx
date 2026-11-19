@@ -65,6 +65,11 @@ export default function Login() {
           <p className="auth-kicker">ESPACE SÉCURISÉ</p>
           <h2>{mode === 'login' ? 'Bon retour parmi nous.' : 'Créez votre espace.'}</h2>
           <p className="auth-intro">{mode === 'login' ? 'Connectez-vous pour retrouver le suivi de vos couveuses.' : 'Inscrivez-vous pour gérer vos couveuses en temps réel.'}</p>
+          {import.meta.env.VITE_USE_MOCKS === 'true' && (
+            <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">
+              Mode démonstration : ce compte sera enregistré uniquement dans ce navigateur et n’est pas synchronisé avec Netlify.
+            </p>
+          )}
 
           <form onSubmit={handleSubmit} className="auth-form">
             {mode === 'register' && <div className="auth-field"><label htmlFor="fullName">Nom complet</label><div className="auth-control"><UserRound className="auth-field-icon" /><input id="fullName" className={inputClass} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Votre nom complet" autoComplete="name" minLength={2} required /></div></div>}

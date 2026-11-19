@@ -1,4 +1,24 @@
+const REGISTERED_USERS_KEY = 'smart_incubator_demo_users';
+const demoUsers = [
+  { id: 1, email: 'admin@smartincubator.com', password: 'admin123', name: 'Admin', role: 'admin' },
+  { id: 2, email: 'operateur@smartincubator.com', password: 'operateur123', name: 'Opérateur', role: 'opérateur' },
+];
 
+function getRegisteredUsers() {
+  const users = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || '[]');
+  if (!Array.isArray(users)) {
+    throw new Error('Les comptes de démonstration enregistrés sont invalides.');
+  }
+  return users;
+}
+
+async function hashPassword(password, salt) {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(`${salt}:${password}`),
+  );
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
 function calculerDateFin(dateDebut, dureeJours) {
   if (!dateDebut || dureeJours === null || dureeJours === undefined || dureeJours === '') {
@@ -486,6 +506,38 @@ export async function getMockResponse(path, options = {}) {
   }
 
 
+  if (path === "/auth/register" && options.method === "POST") {
+    const body = JSON.parse(options.body || "{}");
+    const name = (body.full_name || "").trim();
+    const email = (body.email || "").trim().toLowerCase();
+    const password = body.password || "";
+
+    if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 6) {
+      throw new Error("Renseignez un nom, une adresse e-mail valide et un mot de passe d’au moins 6 caractères.");
+    }
+
+    const registeredUsers = getRegisteredUsers();
+    const emailExists = [...demoUsers, ...registeredUsers]
+      .some((user) => user.email.toLowerCase() === email);
+    if (emailExists) {
+      throw new Error("Un compte de démonstration existe déjà pour cette adresse e-mail.");
+    }
+
+    const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('');
+    const user = {
+      id: Date.now(),
+      email,
+      name,
+      role: 'admin',
+      passwordSalt: salt,
+      passwordHash: await hashPassword(password, salt),
+    };
+    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify([...registeredUsers, user]));
+    return { success: true };
+  }
+
   if (path === "/auth/login" && options.method === "POST") {
     const body = JSON.parse(options.body || "{}");
     const email = (body.email || "").trim().toLowerCase();
@@ -497,25 +549,30 @@ export async function getMockResponse(path, options = {}) {
       throw err;
     }
 
-    const mockUsers = [
-      { id: 1, email: "admin@smartincubator.com", password: "admin123", name: "Admin", role: "admin" },
-      { id: 2, email: "operateur@smartincubator.com", password: "operateur123", name: "Opérateur", role: "opérateur" },
-    ];
-
-    const user = mockUsers.find((u) => u.email.toLowerCase() === email);
+    const registeredUsers = getRegisteredUsers();
+    const user = [...demoUsers, ...registeredUsers]
+      .find((candidate) => candidate.email.toLowerCase() === email);
     if (!user) {
       const err = new Error("Aucun compte ne correspond à cet email");
       err.code = "ACCOUNT_NOT_FOUND";
       throw err;
     }
 
-    if (user.password !== password) {
+    const passwordMatches = user.passwordHash
+      ? await hashPassword(password, user.passwordSalt) === user.passwordHash
+      : user.password === password;
+    if (!passwordMatches) {
       const err = new Error("Mot de passe incorrect");
       err.code = "INVALID_PASSWORD";
       throw err;
     }
 
-    const { password: _omit, ...safeUser } = user;
+    const {
+      password: _password,
+      passwordHash: _passwordHash,
+      passwordSalt: _passwordSalt,
+      ...safeUser
+    } = user;
     return { success: true, user: safeUser, token: `mock-token-${user.id}` };
   }
 

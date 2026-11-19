@@ -6,7 +6,7 @@ Le firmware ESP32 rejoint votre Wi-Fi et un broker MQTT TLS. L’application Rea
 
 Le tableau de bord de couveuse est actuellement en mode démonstration (`VITE_USE_MOCKS=true`) : les mesures, profils et commandes de couveuse sont simulés et ne sont pas enregistrés sur un serveur. Dans **Commandes manuelles**, « Ventilation · LED GPIO2 » envoie `ON`/`OFF` sur MQTT et pilote la LED de l’ESP32. Aucun ventilateur physique n’est relié à cette commande. La page **LED GPIO2** permet aussi de tester directement la connexion MQTT.
 
-Le formulaire d’inscription et les comptes de démonstration ne fournissent pas une authentification de production. N’utilisez pas ce mode pour protéger des données privées ou commander des équipements réels.
+En mode démo, l’inscription et la connexion sont enregistrées localement dans le navigateur ; elles ne sont pas partagées avec Netlify ni avec d’autres appareils. Cette authentification n’est pas sécurisée et ne convient pas à la protection de données privées ou au contrôle d’équipements réels.
 
 ## 1. Préparer le broker
 
@@ -34,7 +34,7 @@ Utilisez les topics `esp32-devkit-v1/led/command`, `esp32-devkit-v1/led/state` e
 
 Dans `web`, copiez `.env.example` vers `.env.local`, puis renseignez l’URL MQTT WSS et les identifiants du compte web. L’URL est généralement fournie par votre service MQTT.
 
-Le compte de démonstration du front se trouve dans le README du projet source. En mode `VITE_USE_MOCKS=true`, les mesures, profils et commandes de couveuse sont simulés et ne sont pas conservés après rechargement. Seule la commande « Ventilation · LED GPIO2 » et la page « LED GPIO2 » publient sur MQTT.
+En mode `VITE_USE_MOCKS=true`, inscrivez-vous depuis la page de connexion ou utilisez un compte de démonstration. Les comptes sont conservés seulement dans le navigateur utilisé. Les mesures, profils et autres commandes de couveuse sont simulés et ne sont pas conservés après rechargement. Seule la commande « Ventilation · LED GPIO2 » et la page « LED GPIO2 » publient sur MQTT.
 
 ```powershell
 cd web
