@@ -7,3 +7,4 @@ include/secrets.h
 web/node_modules/
 web/dist/
 web/.env.local
+.vercel/
