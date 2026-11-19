@@ -37,9 +37,15 @@ const char* shortName(AlarmId id) {
 
 static void saveStore() {
   Preferences pr;
-  pr.begin("alarm", false);
-  pr.putBytes("j", &store, sizeof(store));
+  if (!pr.begin("alarm", false)) {
+    Serial.println("Preferences: ouverture du namespace NVS 'alarm' impossible.");
+    return;
+  }
+  const size_t bytes = pr.putBytes("j", &store, sizeof(store));
   pr.end();
+  if (bytes != sizeof(store)) {
+    Serial.println("Preferences: sauvegarde du journal d'alarmes NVS incomplete.");
+  }
 }
 
 static void logAlarm(AlarmId id) {
@@ -54,7 +60,10 @@ void begin() {
   digitalWrite(PIN_BUZZER, OUT_OFF);
   memset(&store, 0, sizeof(store));
   Preferences pr;
-  pr.begin("alarm", true);
+  if (!pr.begin("alarm", false)) {
+    Serial.println("Preferences: ouverture du namespace NVS 'alarm' impossible; journal vide.");
+    return;
+  }
   if (pr.getBytesLength("j") == sizeof(store)) pr.getBytes("j", &store, sizeof(store));
   pr.end();
   if (store.head >= JOURNAL_MAX || store.count > JOURNAL_MAX) memset(&store, 0, sizeof(store));
