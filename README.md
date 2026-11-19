@@ -2,6 +2,12 @@
 
 Le firmware ESP32 rejoint votre Wi-Fi et un broker MQTT TLS. L’application React utilise MQTT sur WebSocket sécurisé (WSS). La carte et la page web échangent les commandes via le broker, sans exposer de port entrant sur le routeur.
 
+## Interface de couveuse
+
+Le tableau de bord de couveuse est actuellement en mode démonstration (`VITE_USE_MOCKS=true`) : les mesures, profils et commandes de couveuse sont simulés et ne sont pas enregistrés sur un serveur. Dans **Commandes manuelles**, « Ventilation · LED GPIO2 » envoie `ON`/`OFF` sur MQTT et pilote la LED de l’ESP32. Aucun ventilateur physique n’est relié à cette commande. La page **LED GPIO2** permet aussi de tester directement la connexion MQTT.
+
+Le formulaire d’inscription et les comptes de démonstration ne fournissent pas une authentification de production. N’utilisez pas ce mode pour protéger des données privées ou commander des équipements réels.
+
 ## 1. Préparer le broker
 
 Créez un broker MQTT qui fournit :
@@ -28,6 +34,8 @@ Utilisez les topics `esp32-devkit-v1/led/command`, `esp32-devkit-v1/led/state` e
 
 Dans `web`, copiez `.env.example` vers `.env.local`, puis renseignez l’URL MQTT WSS et les identifiants du compte web. L’URL est généralement fournie par votre service MQTT.
 
+Le compte de démonstration du front se trouve dans le README du projet source. En mode `VITE_USE_MOCKS=true`, les mesures, profils et commandes de couveuse sont simulés et ne sont pas conservés après rechargement. Seule la commande « Ventilation · LED GPIO2 » et la page « LED GPIO2 » publient sur MQTT.
+
 ```powershell
 cd web
 npm install
@@ -46,7 +54,7 @@ npm run build
 
 1. Envoyez le projet sur un dépôt GitHub et importez ce dépôt dans Vercel.
 2. Dans les réglages du projet Vercel, choisissez `web` comme **Root Directory**. Vercel détecte Vite ; la commande de build est `npm run build` et le dossier de sortie `dist`.
-3. Avant le premier déploiement, ajoutez les variables `VITE_MQTT_URL`, `VITE_MQTT_USERNAME` et `VITE_MQTT_PASSWORD` dans **Settings → Environment Variables**. Cochez **Production** (et **Preview** si nécessaire).
+3. Ajoutez `VITE_USE_MOCKS=true`, `VITE_MQTT_URL`, `VITE_MQTT_USERNAME` et `VITE_MQTT_PASSWORD` dans **Settings → Environment Variables**. Cochez **Production** (et **Preview** si nécessaire).
 4. Lancez le déploiement. Chaque push ultérieur déclenchera automatiquement un nouveau déploiement.
 
 ### Avec la CLI Vercel (sans dépôt GitHub)

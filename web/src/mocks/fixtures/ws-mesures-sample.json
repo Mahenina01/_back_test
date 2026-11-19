@@ -1,0 +1,6 @@
+[
+  { "event": "mesure", "data": { "temperature": 37.55, "humidite": 57.8, "pwm_chauffage": 38, "jour_incubation": 12, "timestamp": "2026-09-10T14:00:00Z" } },
+  { "event": "mesure", "data": { "temperature": 37.62, "humidite": 58.1, "pwm_chauffage": 45, "jour_incubation": 12, "timestamp": "2026-09-10T14:00:15Z" } },
+  { "event": "mesure", "data": { "temperature": 37.58, "humidite": 58.0, "pwm_chauffage": 40, "jour_incubation": 12, "timestamp": "2026-09-10T14:00:30Z" } },
+  { "event": "alarme", "data": { "id": 1, "type": "niveau_eau_bas", "timestamp": "2026-09-10T14:00:45Z", "active": true } }
+]
