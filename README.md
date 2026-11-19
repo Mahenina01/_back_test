@@ -78,3 +78,13 @@ Les changements de variables d’environnement prennent effet au prochain build/
 **Sécurité :** les valeurs `VITE_*` sont intégrées au JavaScript livré au navigateur ; elles sont lisibles par les visiteurs, même si elles sont configurées dans les réglages Vercel. Utilisez un compte MQTT web dédié, à privilèges minimaux et limité aux topics décrits plus haut. Ne placez jamais un mot de passe administrateur ou réutilisé dans ces variables.
 
 La LED intégrée de nombreuses ESP32 DevKit V1 est reliée à GPIO2. La polarité peut varier selon la carte.
+
+## Firmware de la couveuse
+
+Les modules C++ du dépôt `Mahenina01/incubateur_v1` sont maintenant directement dans `src/` et leur initialisation/boucle sont fusionnées avec le firmware MQTT de la LED dans `src/main.cpp`. La LED reste sur GPIO2 et conserve ses topics MQTT. Le point d’accès local de la couveuse utilise le mode AP+STA afin de ne pas couper la connexion Wi-Fi/MQTT lorsque l’AP est activé ou désactivé.
+
+La configuration de l’écran prévoit son signal D/C sur GPIO5. Avant de téléverser et d’initialiser l’écran, déplace physiquement son fil D/C de GPIO2 vers GPIO5. GPIO5 est une broche de démarrage de l’ESP32 : vérifie le démarrage de la carte avec l’écran branché. Le capteur de niveau d’eau reste sur GPIO39, une entrée uniquement.
+
+**Avant le téléversement :** les modules couveuse pilotent les sorties chauffage (GPIO25), ventilateur (GPIO26), humidificateur (GPIO27), pompe (GPIO17) et moteur (GPIO32/33), selon les capteurs et les réglages enregistrés. Vérifie le câblage, les relais et les sécurités avant de connecter des charges réelles.
+
+Le module réseau Cloud attend une API REST et des identifiants `CLOUD_*` distincts de la liaison MQTT LED. Ils ne sont pas configurés ici ; les données de la couveuse ne sont donc pas encore envoyées à Vercel, dont le tableau de bord reste en mode démo.

@@ -4,6 +4,7 @@
 .vscode/launch.json
 .vscode/ipch
 include/secrets.h
+src/cloud_secrets.h
 web/node_modules/
 web/dist/
 web/.env.local

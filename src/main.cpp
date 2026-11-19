@@ -2,6 +2,15 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
+#include "config.h"
+#include "settings.h"
+#include "sensors.h"
+#include "control.h"
+#include "turner.h"
+#include "alarms.h"
+#include "ui.h"
+#include "net.h"
+#include "core.h"
 
 #if __has_include("secrets.h")
 #include "secrets.h"
@@ -95,41 +104,56 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
+  settingsBegin();
+  Sensors::begin();
+  Control::begin();
+  Turner::begin();
+  Alarms::begin();
+  Ui::begin();
+  Net::begin();
+  Core::wdtBegin();
+  Serial.println("Couveuse v" FW_VERSION " demarree");
+
   if (!configurationIsComplete()) {
-    Serial.println("Configuration manquante : renseignez include/secrets.h.");
+    Serial.println("Configuration MQTT manquante : LED distante desactivee.");
     return;
   }
 
   tlsClient.setCACert(MQTT_ROOT_CA);
   mqtt.setServer(MQTT_HOST, MQTT_PORT);
+  mqtt.setSocketTimeout(2);
   mqtt.setCallback(onMqttMessage);
-  WiFi.mode(WIFI_STA);
+  WiFi.mode(Net::apOn ? WIFI_AP_STA : WIFI_STA);
   WiFi.setAutoReconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.println("Connexion au Wi-Fi...");
 }
 
 void loop() {
-  if (!configurationIsComplete()) {
-    delay(1000);
-    return;
-  }
+  Sensors::update();
+  Control::update();
+  Turner::update();
+  Alarms::update();
+  Ui::update();
+  Net::update();
 
-  if (WiFi.status() != WL_CONNECTED) {
-    delay(100);
-    return;
-  }
-
-  if (!mqtt.connected()) {
-    const unsigned long now = millis();
-    if (now - lastReconnectAttempt >= RECONNECT_INTERVAL_MS) {
-      lastReconnectAttempt = now;
-      if (!connectMqtt()) {
-        Serial.printf("Connexion MQTT echouee (code %d).\n", mqtt.state());
+  if (configurationIsComplete() && WiFi.status() == WL_CONNECTED) {
+    if (mqtt.connected()) {
+      mqtt.loop();
+    } else {
+      const unsigned long now = millis();
+      if (now - lastReconnectAttempt >= RECONNECT_INTERVAL_MS) {
+        lastReconnectAttempt = now;
+        Core::wdtPause();
+        const bool connected = connectMqtt();
+        Core::wdtResume();
+        if (!connected) {
+          Serial.printf("Connexion MQTT echouee (code %d).\n", mqtt.state());
+        }
       }
     }
-    return;
   }
 
-  mqtt.loop();
+  Core::wdtFeed();
+  delay(1);
 }
