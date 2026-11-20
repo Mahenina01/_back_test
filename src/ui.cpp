@@ -219,8 +219,8 @@ static const char* calKey() {
 
 static bool loadCal() {
   Preferences p;
-  p.begin("touch", true);
-  bool ok = p.getBytesLength(calKey()) == sizeof(cal);
+  if (!p.begin("touch", false)) return false;
+  bool ok = p.isKey(calKey()) && p.getBytesLength(calKey()) == sizeof(cal);
   if (ok) p.getBytes(calKey(), cal, sizeof(cal));
   p.end();
   return ok;

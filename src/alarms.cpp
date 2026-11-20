@@ -64,7 +64,9 @@ void begin() {
     Serial.println("Preferences: ouverture du namespace NVS 'alarm' impossible; journal vide.");
     return;
   }
-  if (pr.getBytesLength("j") == sizeof(store)) pr.getBytes("j", &store, sizeof(store));
+  if (pr.isKey("j") && pr.getBytesLength("j") == sizeof(store)) {
+    pr.getBytes("j", &store, sizeof(store));
+  }
   pr.end();
   if (store.head >= JOURNAL_MAX || store.count > JOURNAL_MAX) memset(&store, 0, sizeof(store));
 }
