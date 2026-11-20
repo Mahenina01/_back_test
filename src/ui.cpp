@@ -663,7 +663,11 @@ void begin() {
   if (PIN_TFT_BL >= 0) { pinMode(PIN_TFT_BL, OUTPUT); digitalWrite(PIN_TFT_BL, HIGH); }
   tft.init();
   tft.setRotation(UI_ROTATION);
-  if (loadCal()) tft.setTouch(cal); else runCal();
+  if (loadCal()) {
+    tft.setTouch(cal);
+  } else {
+    Serial.println("Calibration tactile absente. Envoyez 'c' au moniteur serie pour la lancer.");
+  }
   lastActivity = millis();
   go(S_DASH);
 }

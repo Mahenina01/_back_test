@@ -137,18 +137,31 @@ void loop() {
   Ui::update();
   Net::update();
 
-  if (configurationIsComplete() && WiFi.status() == WL_CONNECTED) {
-    if (mqtt.connected()) {
-      mqtt.loop();
-    } else {
-      const unsigned long now = millis();
-      if (now - lastReconnectAttempt >= RECONNECT_INTERVAL_MS) {
-        lastReconnectAttempt = now;
-        Core::wdtPause();
-        const bool connected = connectMqtt();
-        Core::wdtResume();
-        if (!connected) {
-          Serial.printf("Connexion MQTT echouee (code %d).\n", mqtt.state());
+  if (configurationIsComplete()) {
+    const wl_status_t wifiStatus = WiFi.status();
+    static int lastWifiStatus = -1;
+    if (static_cast<int>(wifiStatus) != lastWifiStatus) {
+      lastWifiStatus = static_cast<int>(wifiStatus);
+      if (wifiStatus == WL_CONNECTED) {
+        Serial.printf("Wi-Fi connecte. Adresse IP: %s\n", WiFi.localIP().toString().c_str());
+      } else {
+        Serial.printf("Wi-Fi non connecte (statut %d).\n", lastWifiStatus);
+      }
+    }
+
+    if (wifiStatus == WL_CONNECTED) {
+      if (mqtt.connected()) {
+        mqtt.loop();
+      } else {
+        const unsigned long now = millis();
+        if (now - lastReconnectAttempt >= RECONNECT_INTERVAL_MS) {
+          lastReconnectAttempt = now;
+          Core::wdtPause();
+          const bool connected = connectMqtt();
+          Core::wdtResume();
+          if (!connected) {
+            Serial.printf("Connexion MQTT echouee (code %d).\n", mqtt.state());
+          }
         }
       }
     }
