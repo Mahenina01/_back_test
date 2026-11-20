@@ -4,9 +4,9 @@ Le firmware ESP32 rejoint votre Wi-Fi et un broker MQTT TLS. L’application Rea
 
 ## Interface de couveuse
 
-Le tableau de bord de couveuse est actuellement en mode démonstration (`VITE_USE_MOCKS=true`) : les mesures, profils et commandes de couveuse sont simulés et ne sont pas enregistrés sur un serveur. Dans **Commandes manuelles**, « Ventilation · LED GPIO2 » envoie `ON`/`OFF` sur MQTT et pilote la LED de l’ESP32. Aucun ventilateur physique n’est relié à cette commande. La page **LED GPIO2** permet aussi de tester directement la connexion MQTT.
+L’application utilise le backend configuré par `VITE_API_URL` pour l’authentification et les données de couveuse. Le mode de démonstration est désactivé par défaut (`VITE_USE_MOCKS=false`) : sans backend disponible, les données ne sont pas remplacées par des valeurs fictives. Pour l’instant, la commande matérielle directement prise en charge par MQTT est la LED GPIO2 de l’ESP32 ; aucun ventilateur physique n’y est relié.
 
-En mode démo, l’inscription et la connexion sont enregistrées localement dans le navigateur ; elles ne sont pas partagées avec Netlify ni avec d’autres appareils. Cette authentification n’est pas sécurisée et ne convient pas à la protection de données privées ou au contrôle d’équipements réels.
+L’inscription et la connexion passent par le backend réel. Les mesures réelles nécessitent que ce backend soit configuré et alimenté par l’équipement ; le mode démo ne constitue pas une source de données.
 
 ## 1. Préparer le broker
 
@@ -32,9 +32,9 @@ Utilisez les topics `esp32-devkit-v1/led/command`, `esp32-devkit-v1/led/state` e
 
 ## 3. Lancer ou publier l’application React
 
-Dans `web`, copiez `.env.example` vers `.env.local`, puis renseignez l’URL MQTT WSS et les identifiants du compte web. L’URL est généralement fournie par votre service MQTT.
+Dans `web`, copiez `.env.example` vers `.env.local`, puis renseignez l’URL du backend (`VITE_API_URL`), l’URL MQTT WSS et les identifiants du compte web. L’URL MQTT WSS est généralement fournie par votre service MQTT. Gardez `VITE_USE_MOCKS=false` pour ne pas afficher de données de démonstration.
 
-En mode `VITE_USE_MOCKS=true`, inscrivez-vous depuis la page de connexion ou utilisez un compte de démonstration. Les comptes sont conservés seulement dans le navigateur utilisé. Les mesures, profils et autres commandes de couveuse sont simulés et ne sont pas conservés après rechargement. Seule la commande « Ventilation · LED GPIO2 » et la page « LED GPIO2 » publient sur MQTT.
+Connectez-vous avec un compte géré par le backend. Les mesures et fonctions de gestion de la couveuse nécessitent que ce backend fournisse les routes API utilisées par l’application. La commande « Ventilation · LED GPIO2 » publie directement sur MQTT.
 
 ```powershell
 cd web
