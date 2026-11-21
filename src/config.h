@@ -8,21 +8,22 @@
 #define PIN_HEATER       25
 #define PIN_FAN          26
 #define PIN_HUMIDIFIER   27
-#define PIN_PUMP         17
 #define PIN_MOTOR_IN1    32
 #define PIN_MOTOR_IN2    33
 #define PIN_BUZZER       14
 
 #define PIN_LIMIT_L      34
 #define PIN_LIMIT_R      35
-#define PIN_WATER_LEVEL  39
 
 #define PIN_I2C_SDA      21
 #define PIN_I2C_SCL      22
 
-#define PIN_MATRIX_CS   5
+#define PIN_MATRIX_CS   17
 #define PIN_MATRIX_DIN  23
 #define PIN_MATRIX_CLK  18
+
+#define FEATURE_PUMP        0
+#define FEATURE_WATER_LEVEL 0
 
 #define PIN_TFT_BL       -1
 

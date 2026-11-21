@@ -22,15 +22,26 @@ static uint32_t manualPumpUntil = 0;
 static inline void out(uint8_t pin, bool on) { digitalWrite(pin, on ? OUT_ON : OUT_OFF); }
 
 void begin() {
+#if FEATURE_PUMP
   const uint8_t outs[] = {PIN_HEATER, PIN_FAN, PIN_HUMIDIFIER, PIN_PUMP};
+#else
+  const uint8_t outs[] = {PIN_HEATER, PIN_FAN, PIN_HUMIDIFIER};
+#endif
   for (uint8_t p : outs) { pinMode(p, OUTPUT); out(p, false); }
   lastPid = millis();
   winStart = millis();
 }
 
-void pumpPurge(uint16_t sec) { purgeUntil = millis() + (uint32_t)sec * 1000UL; }
+void pumpPurge(uint16_t sec) {
+#if FEATURE_PUMP
+  purgeUntil = millis() + (uint32_t)sec * 1000UL;
+#else
+  (void)sec;
+#endif
+}
 
 bool setManualPump(bool on) {
+#if FEATURE_PUMP
   if (on && water == WTR_EMPTY) return false;
   uint16_t durationSec = S.pumpMaxSec < 60 ? S.pumpMaxSec : 60;
   if (durationSec == 0) return false;
@@ -38,6 +49,10 @@ bool setManualPump(bool on) {
   manualPumpOn = on;
   manualPumpUntil = millis() + (uint32_t)durationSec * 1000UL;
   return true;
+#else
+  (void)on;
+  return false;
+#endif
 }
 
 static void phaseUpdate() {
@@ -105,17 +120,26 @@ void update() {
   out(PIN_FAN, fanOn);
 
   if (Sensors::waterOk) water = WTR_OK;
+#if FEATURE_WATER_LEVEL
   else {
     if (water == WTR_OK) { water = WTR_LOW; pumpStart = now; }
     if (water == WTR_LOW && now - pumpStart >= (uint32_t)S.pumpMaxSec * 1000UL) water = WTR_EMPTY;
   }
+#else
+  else {
+    water = WTR_OK;
+  }
+#endif
+#if FEATURE_PUMP
   if (manualPumpOverride && (int32_t)(now - manualPumpUntil) >= 0) {
     manualPumpOverride = false;
   }
   pumpOn = manualPumpOverride
       ? (manualPumpOn && water != WTR_EMPTY)
       : ((water == WTR_LOW) || ((int32_t)(purgeUntil - now) > 0));
-  out(PIN_PUMP, pumpOn);
+#else
+  pumpOn = false;
+#endif
 
   if (safety || water == WTR_EMPTY) humOn = false;
   else if (h < effHum - S.humHyst) humOn = true;

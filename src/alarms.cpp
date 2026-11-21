@@ -105,7 +105,11 @@ void update() {
   bool c[AL_COUNT] = {};
   c[AL_TEMP_HIGH]   = Control::critHigh;
   c[AL_TEMP_LOW]    = Control::critLow;
+#if FEATURE_WATER_LEVEL
   c[AL_WATER_EMPTY] = (Control::water == Control::WTR_EMPTY);
+#else
+  c[AL_WATER_EMPTY] = false;
+#endif
   c[AL_MOTOR]       = Turner::fault;
   c[AL_DHT_LOST]    = !Sensors::dhtOk;
 

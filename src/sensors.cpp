@@ -19,7 +19,6 @@ static Deb dL, dR, dW;
 
 static bool rdL() { return digitalRead(PIN_LIMIT_L) == LOW; }
 static bool rdR() { return digitalRead(PIN_LIMIT_R) == LOW; }
-static bool rdW() { return digitalRead(PIN_WATER_LEVEL) == HIGH; }
 
 static bool debounce(Deb& d, bool raw, uint32_t now) {
   if (raw != d.raw) { d.raw = raw; d.t = now; }
@@ -30,11 +29,17 @@ static bool debounce(Deb& d, bool raw, uint32_t now) {
 void begin() {
   pinMode(PIN_LIMIT_L, INPUT);
   pinMode(PIN_LIMIT_R, INPUT);
-  pinMode(PIN_WATER_LEVEL, INPUT);
   dL = {rdL(), rdL(), 0};
   dR = {rdR(), rdR(), 0};
-  dW = {rdW(), rdW(), 0};
-  limL = dL.state; limR = dR.state; waterOk = dW.state;
+  limL = dL.state; limR = dR.state;
+#if FEATURE_WATER_LEVEL
+  pinMode(PIN_WATER_LEVEL, INPUT);
+  dW = {digitalRead(PIN_WATER_LEVEL) == HIGH,
+        digitalRead(PIN_WATER_LEVEL) == HIGH, 0};
+  waterOk = dW.state;
+#else
+  waterOk = true;
+#endif
 
   dht.begin();
 
@@ -62,7 +67,11 @@ void update() {
 
   limL = debounce(dL, rdL(), now);
   limR = debounce(dR, rdR(), now);
+#if FEATURE_WATER_LEVEL
   waterOk = debounce(dW, rdW(), now);
+#else
+  waterOk = true;
+#endif
 
   if (rtcOk && now - lastRtc >= 1000) {
     lastRtc = now;
