@@ -12,7 +12,7 @@ struct Settings {
   uint8_t fanMode = 0;
   bool turnAuto = true;
   bool phaseAuto = true;
-  bool apEnabled = true;
+  bool apEnabled = false;
   int8_t lastDir = 1;
   uint32_t startEpoch = 0;
   uint32_t lastTurnEpoch = 0;

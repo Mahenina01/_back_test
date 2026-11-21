@@ -2,7 +2,8 @@
 #include "settings.h"
 
 Settings S;
-static const uint32_t MAGIC = 0xC0DE0003;
+static const uint32_t PREVIOUS_MAGIC = 0xC0DE0003;
+static const uint32_t MAGIC = 0xC0DE0004;
 
 void settingsSave() {
   Preferences pr;
@@ -24,8 +25,11 @@ void settingsBegin() {
     Serial.println("Preferences: ouverture du namespace NVS 'couv' impossible; configuration par defaut conservee.");
     return;
   }
-  bool ok = pr.getUInt("magic", 0) == MAGIC && pr.getBytesLength("cfg") == sizeof(S);
-  if (ok) pr.getBytes("cfg", &S, sizeof(S));
+  const uint32_t storedMagic = pr.getUInt("magic", 0);
+  const bool compatible = (storedMagic == MAGIC || storedMagic == PREVIOUS_MAGIC)
+      && pr.getBytesLength("cfg") == sizeof(S);
+  if (compatible) pr.getBytes("cfg", &S, sizeof(S));
   pr.end();
-  if (!ok) settingsSave();
+  if (storedMagic == PREVIOUS_MAGIC && compatible) S.apEnabled = false;
+  if (!compatible || storedMagic == PREVIOUS_MAGIC) settingsSave();
 }
