@@ -8,7 +8,6 @@ import {
   AlertCircle,
   Calendar,
   Clock,
-  Fan,
   Plus,
   Power,
   RefreshCw,
@@ -19,7 +18,6 @@ import Card from '../components/Card';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useIncubator } from '../context/IncubatorContext';
 import { useLiveData } from '../context/LiveDataContext';
-import { useMqtt } from '../context/MqttContext';
 import { useApi } from '../hooks/useApi';
 import { apiClient } from '../services/apiClient';
 
@@ -28,20 +26,18 @@ const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
 
 export default function Commandes() {
   const { dernierMessage, directEsp32 } = useLiveData();
-  const { connected: mqttConnected, deviceStatus, ledState, publishLedState } = useMqtt();
   const { selectedIncubatorId } = useIncubator();
   const { execute } = useApi();
 
   const [pumpState, setPumpState] = useState(false);
-  const [mixingFanState, setMixingFanState] = useState(false);
   const [motorState, setMotorState] = useState(false);
   const [statusLoading, setStatusLoading] = useState(true);
-  const [pending, setPending] = useState({ pump: false, motor: false, mixingFan: false });
+  const [pending, setPending] = useState({ pump: false, motor: false });
   const [commandError, setCommandError] = useState('');
 
   const [confirmCmd, setConfirmCmd] = useState(null);
 
-  const overrideUntil = useRef({ pump: 0, mixingFan: 0 });
+  const overrideUntil = useRef({ pump: 0 });
 
   const [retournements, setRetournements] = useState([]);
   const [newDate, setNewDate] = useState('');
@@ -73,12 +69,6 @@ export default function Commandes() {
   }, [dernierMessage]);
 
   useEffect(() => {
-    if (typeof ledState === 'boolean') {
-      setMixingFanState(ledState);
-    }
-  }, [ledState]);
-
-  useEffect(() => {
     let active = true;
     if (USE_MOCKS || !selectedIncubatorId) {
       setRetournements([]);
@@ -104,7 +94,7 @@ export default function Commandes() {
   const runCommand = async (id, nextState, setState, apiCall) => {
     setCommandError('');
     setState(nextState);
-    if (id === 'pump' || id === 'mixingFan') {
+    if (id === 'pump') {
       overrideUntil.current[id] = Date.now() + OVERRIDE_MS;
     }
     setPending(p => ({ ...p, [id]: true }));
@@ -112,10 +102,8 @@ export default function Commandes() {
       if (apiCall) await apiCall();
     } catch (err) {
       console.error(`Erreur commande ${id}:`, err);
-      if (id === 'mixingFan') {
-        setState(!nextState);
-        setCommandError(err.message || 'Impossible d’envoyer la commande LED.');
-      }
+      if (id !== 'motor') setState(!nextState);
+      setCommandError(err.message || 'Impossible d’envoyer la commande.');
     } finally {
       setPending(p => ({ ...p, [id]: false }));
       if (id === 'motor') setState(false);
@@ -146,16 +134,6 @@ export default function Commandes() {
         ? apiClient.postIncubatorMotorCommand(selectedIncubatorId)
         : Promise.reject('Aucune couveuse sélectionnée'),
       icon: RefreshCw,
-    },
-    {
-      id: 'mixingFan',
-      name: 'Ventilation · LED GPIO2',
-      description: 'Mode démonstration : cette commande pilote la LED, pas un ventilateur physique.',
-      state: mixingFanState,
-      critical: false,
-      setState: setMixingFanState,
-      apiCall: publishLedState,
-      icon: Fan,
     },
   ];
 
@@ -257,7 +235,7 @@ export default function Commandes() {
             <div className="mt-4 flex items-center gap-3">
               <button
                 onClick={() => requestCommand(cmd)}
-                disabled={directEsp32 || statusLoading || pending[cmd.id] || !selectedIncubatorId || (cmd.id === 'mixingFan' && (!mqttConnected || deviceStatus !== 'online'))}
+                disabled={directEsp32 || statusLoading || pending[cmd.id] || !selectedIncubatorId}
                 className={`${cmd.state ? 'btn-secondary' : 'btn-primary'} flex-1 py-2 px-4 text-sm disabled:opacity-50`}
               >
                 {pending[cmd.id] ? 'Envoi…' : cmd.id === 'motor' ? 'Déclencher' : cmd.state ? 'Désactiver' : 'Activer'}
@@ -274,18 +252,6 @@ export default function Commandes() {
       {commandError && (
         <p className="text-sm text-[var(--color-crit)]" role="alert">{commandError}</p>
       )}
-
-      <Card>
-        <p className="text-sm text-[var(--color-ink-soft)]">
-          La commande « Ventilation · LED GPIO2 » envoie <code>ON</code>/<code>OFF</code> au broker MQTT.
-          Elle ne met pas en marche un ventilateur réel.
-        </p>
-        {typeof ledState === 'boolean' && (
-          <p className="mt-2 text-sm font-medium text-[var(--color-ink)]">
-            État reçu de l’ESP32 : {ledState ? 'LED allumée' : 'LED éteinte'}
-          </p>
-        )}
-      </Card>
 
       { }
       <Card>

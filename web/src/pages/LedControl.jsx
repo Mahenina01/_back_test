@@ -1,30 +1,24 @@
-import React, { useState } from 'react';
-import { Lightbulb } from 'lucide-react';
+import React from 'react';
+import { Activity } from 'lucide-react';
 import { useMqtt } from '../context/MqttContext';
 
 export default function LedControl() {
-  const { connection, connected, deviceStatus, ledState, publishLedState } = useMqtt();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState('');
-
-  const sendCommand = async (on) => {
-    setPending(true);
-    setError('');
-    try {
-      await publishLedState(on);
-    } catch (commandError) {
-      setError(commandError.message || 'Échec de la commande MQTT.');
-    } finally {
-      setPending(false);
-    }
-  };
+  const { connection, connected, deviceStatus, vibrationDetected } = useMqtt();
+  const sensorReady = connected && deviceStatus === 'online' && typeof vibrationDetected === 'boolean';
+  const vibrationLabel = !connected || deviceStatus !== 'online'
+    ? 'Capteur indisponible'
+    : vibrationDetected === null
+      ? 'En attente de l’état du capteur'
+      : vibrationDetected
+        ? 'Vibration détectée'
+        : 'Aucune vibration';
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-[var(--color-ink)]">Contrôle de la LED GPIO2</h1>
+        <h1 className="text-2xl font-semibold text-[var(--color-ink)]">Capteur de vibration KY-002</h1>
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-          Commande MQTT directe de la LED intégrée à l’ESP32.
+          Surveillance en temps réel du capteur connecté à GPIO2.
         </p>
       </div>
 
@@ -43,43 +37,24 @@ export default function LedControl() {
           </span>
         </div>
 
-        <div className="my-10 flex flex-col items-center gap-4">
+        <div className="my-10 flex flex-col items-center gap-4" aria-live="polite">
           <div className={`flex h-32 w-32 items-center justify-center rounded-full border transition ${
-            ledState
-              ? 'border-emerald-400 bg-emerald-100 text-emerald-600 shadow-[0_0_40px_rgba(16,185,129,0.3)]'
-              : 'border-[var(--color-line-strong)] bg-[var(--color-bg)] text-[var(--color-ink-faint)]'
+            sensorReady && vibrationDetected
+              ? 'border-amber-400 bg-amber-100 text-amber-700 shadow-[0_0_40px_rgba(245,158,11,0.3)]'
+              : sensorReady
+                ? 'border-emerald-400 bg-emerald-100 text-emerald-600'
+                : 'border-[var(--color-line-strong)] bg-[var(--color-bg)] text-[var(--color-ink-faint)]'
           }`}>
-            <Lightbulb size={48} strokeWidth={1.5} />
+            <Activity size={48} strokeWidth={1.5} />
           </div>
           <p className="text-sm font-medium text-[var(--color-ink)]">
-            {ledState === null ? 'État inconnu' : ledState ? 'LED allumée' : 'LED éteinte'}
+            {vibrationLabel}
           </p>
         </div>
-
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => sendCommand(true)}
-            disabled={!connected || deviceStatus !== 'online' || pending}
-            className="btn-primary min-h-11 flex-1 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Allumer
-          </button>
-          <button
-            type="button"
-            onClick={() => sendCommand(false)}
-            disabled={!connected || deviceStatus !== 'online' || pending}
-            className="btn-secondary min-h-11 flex-1 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Éteindre
-          </button>
-        </div>
-        {error && <p className="mt-3 text-sm text-[var(--color-crit)]" role="alert">{error}</p>}
       </section>
 
       <p className="text-xs leading-relaxed text-[var(--color-ink-soft)]">
-        Le bouton « Ventilateur de brassage » dans Commandes manuelles pilote également cette LED.
-        Aucun ventilateur physique n’est connecté à GPIO2.
+        Le capteur envoie « ON » lorsqu’une vibration est détectée et « OFF » au retour au repos.
       </p>
     </div>
   );

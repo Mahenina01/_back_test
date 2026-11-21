@@ -1,8 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import mqtt from 'mqtt';
 
-const commandTopic = 'esp32-devkit-v1/led/command';
-const stateTopic = 'esp32-devkit-v1/led/state';
+const vibrationTopic = 'esp32-devkit-v1/vibration/state';
 const statusTopic = 'esp32-devkit-v1/status';
 const mqttUrl = import.meta.env.VITE_MQTT_URL;
 const mqttUsername = import.meta.env.VITE_MQTT_USERNAME;
@@ -15,7 +14,7 @@ export function MqttProvider({ children }) {
   const [connection, setConnection] = useState('Connexion en cours');
   const [connected, setConnected] = useState(false);
   const [deviceStatus, setDeviceStatus] = useState('inconnu');
-  const [ledState, setLedState] = useState(null);
+  const [vibrationDetected, setVibrationDetected] = useState(null);
 
   useEffect(() => {
     if (!mqttUrl || !mqttUsername || !mqttPassword) {
@@ -35,7 +34,7 @@ export function MqttProvider({ children }) {
     clientRef.current = client;
 
     client.on('connect', () => {
-      client.subscribe([stateTopic, statusTopic], (error) => {
+      client.subscribe([vibrationTopic, statusTopic], (error) => {
         if (error) {
           setConnection('Échec de l’abonnement MQTT');
           setConnected(false);
@@ -65,8 +64,8 @@ export function MqttProvider({ children }) {
       const value = message.toString();
       if (topic === statusTopic) {
         setDeviceStatus(value);
-      } else if (topic === stateTopic && (value === 'ON' || value === 'OFF')) {
-        setLedState(value === 'ON');
+      } else if (topic === vibrationTopic && (value === 'ON' || value === 'OFF')) {
+        setVibrationDetected(value === 'ON');
       }
     });
 
@@ -76,24 +75,8 @@ export function MqttProvider({ children }) {
     };
   }, []);
 
-  const publishLedState = useCallback((on) => new Promise((resolve, reject) => {
-    const client = clientRef.current;
-    if (!client?.connected) {
-      reject(new Error('Le broker MQTT n’est pas connecté.'));
-      return;
-    }
-
-    client.publish(commandTopic, on ? 'ON' : 'OFF', { qos: 1, retain: false }, (error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve();
-    });
-  }), []);
-
   return (
-    <MqttContext.Provider value={{ connection, connected, deviceStatus, ledState, publishLedState }}>
+    <MqttContext.Provider value={{ connection, connected, deviceStatus, vibrationDetected }}>
       {children}
     </MqttContext.Provider>
   );

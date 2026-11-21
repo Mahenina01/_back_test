@@ -38,15 +38,17 @@
 #define MQTT_ROOT_CA ""
 #endif
 
-constexpr uint8_t LED_PIN = 2;
-constexpr char COMMAND_TOPIC[] = "esp32-devkit-v1/led/command";
-constexpr char STATE_TOPIC[] = "esp32-devkit-v1/led/state";
+constexpr uint8_t VIBRATION_PIN = 2;
+constexpr char VIBRATION_TOPIC[] = "esp32-devkit-v1/vibration/state";
 constexpr char STATUS_TOPIC[] = "esp32-devkit-v1/status";
 constexpr unsigned long RECONNECT_INTERVAL_MS = 5000;
+constexpr unsigned long VIBRATION_DEBOUNCE_MS = 20;
 
 WiFiClientSecure tlsClient;
 PubSubClient mqtt(tlsClient);
-bool ledOn = false;
+bool vibrationDetected = false;
+bool vibrationCandidate = false;
+unsigned long vibrationCandidateSince = 0;
 unsigned long lastReconnectAttempt = 0;
 
 bool configurationIsComplete() {
@@ -58,25 +60,27 @@ bool configurationIsComplete() {
          MQTT_ROOT_CA[0] != '\0';
 }
 
-void setLed(bool on) {
-  ledOn = on;
-  digitalWrite(LED_PIN, ledOn ? HIGH : LOW);
-  if (mqtt.connected()) {
-    mqtt.publish(STATE_TOPIC, ledOn ? "ON" : "OFF", true);
+void publishVibrationState() {
+  if (mqtt.connected() &&
+      !mqtt.publish(VIBRATION_TOPIC, vibrationDetected ? "ON" : "OFF", true)) {
+    Serial.println("Publication MQTT de l'etat du capteur echouee.");
   }
 }
 
-void onMqttMessage(char* topic, byte* payload, unsigned int length) {
-  if (strcmp(topic, COMMAND_TOPIC) != 0) {
-    return;
+void updateVibration() {
+  const bool reading = digitalRead(VIBRATION_PIN) == HIGH;
+  const unsigned long now = millis();
+
+  if (reading != vibrationCandidate) {
+    vibrationCandidate = reading;
+    vibrationCandidateSince = now;
   }
 
-  if (length == 2 && memcmp(payload, "ON", 2) == 0) {
-    setLed(true);
-  } else if (length == 3 && memcmp(payload, "OFF", 3) == 0) {
-    setLed(false);
-  } else {
-    Serial.println("Commande MQTT ignoree (valeur attendue : ON ou OFF).");
+  if (reading != vibrationDetected &&
+      now - vibrationCandidateSince >= VIBRATION_DEBOUNCE_MS) {
+    vibrationDetected = reading;
+    Serial.printf("Vibration %s\n", vibrationDetected ? "detectee" : "terminee");
+    publishVibrationState();
   }
 }
 
@@ -93,16 +97,17 @@ bool connectMqtt() {
   }
 
   mqtt.publish(STATUS_TOPIC, "online", true);
-  mqtt.subscribe(COMMAND_TOPIC);
-  mqtt.publish(STATE_TOPIC, ledOn ? "ON" : "OFF", true);
+  publishVibrationState();
   Serial.println("Connecte au broker MQTT.");
   return true;
 }
 
 void setup() {
   Serial.begin(115200);
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);
+  pinMode(VIBRATION_PIN, INPUT);
+  vibrationDetected = digitalRead(VIBRATION_PIN) == HIGH;
+  vibrationCandidate = vibrationDetected;
+  vibrationCandidateSince = millis();
 
   settingsBegin();
   Sensors::begin();
@@ -115,14 +120,13 @@ void setup() {
   Serial.println("Couveuse v" FW_VERSION " demarree");
 
   if (!configurationIsComplete()) {
-    Serial.println("Configuration MQTT manquante : LED distante desactivee.");
+    Serial.println("Configuration MQTT manquante : supervision distante desactivee.");
     return;
   }
 
   tlsClient.setCACert(MQTT_ROOT_CA);
   mqtt.setServer(MQTT_HOST, MQTT_PORT);
   mqtt.setSocketTimeout(2);
-  mqtt.setCallback(onMqttMessage);
   WiFi.mode(Net::apOn ? WIFI_AP_STA : WIFI_STA);
   WiFi.setAutoReconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -130,6 +134,7 @@ void setup() {
 }
 
 void loop() {
+  updateVibration();
   Sensors::update();
   Control::update();
   Turner::update();
