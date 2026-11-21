@@ -1,0 +1,65 @@
+#include <Arduino.h>
+#include "config.h"
+#include "matrix_display.h"
+
+namespace {
+
+constexpr uint8_t TFT_CS_PIN = 15;
+constexpr uint8_t TOUCH_CS_PIN = 13;
+
+constexpr uint8_t DIGIT_GLYPHS[10][8] = {
+  {0x3C, 0x66, 0xC3, 0xC3, 0xC3, 0xC3, 0x66, 0x3C},
+  {0x18, 0x38, 0x18, 0x18, 0x18, 0x18, 0x18, 0x7E},
+  {0x3C, 0x66, 0xC3, 0x03, 0x0C, 0x30, 0x60, 0xFF},
+  {0x7E, 0x03, 0x06, 0x1C, 0x06, 0x03, 0x66, 0x3C},
+  {0x06, 0x0E, 0x1E, 0x36, 0x66, 0xFF, 0x06, 0x06},
+  {0xFF, 0xC0, 0xFC, 0x06, 0x03, 0x03, 0x66, 0x3C},
+  {0x3C, 0x60, 0xC0, 0xFC, 0xC6, 0xC3, 0x66, 0x3C},
+  {0xFF, 0x03, 0x06, 0x0C, 0x18, 0x18, 0x18, 0x18},
+  {0x3C, 0x66, 0xC3, 0x66, 0x3C, 0x66, 0xC3, 0x3C},
+  {0x3C, 0x66, 0xC3, 0x67, 0x3F, 0x03, 0x06, 0x3C},
+};
+
+void writeRegister(uint8_t address, uint8_t value) {
+  digitalWrite(PIN_MATRIX_CS, LOW);
+  shiftOut(PIN_MATRIX_DIN, PIN_MATRIX_CLK, MSBFIRST, address);
+  shiftOut(PIN_MATRIX_DIN, PIN_MATRIX_CLK, MSBFIRST, value);
+  digitalWrite(PIN_MATRIX_CS, HIGH);
+}
+
+}
+
+namespace MatrixDisplay {
+
+void begin() {
+  digitalWrite(TFT_CS_PIN, HIGH);
+  digitalWrite(TOUCH_CS_PIN, HIGH);
+  pinMode(PIN_MATRIX_DIN, OUTPUT);
+  pinMode(PIN_MATRIX_CLK, OUTPUT);
+  pinMode(PIN_MATRIX_CS, OUTPUT);
+  digitalWrite(PIN_MATRIX_CLK, LOW);
+  digitalWrite(PIN_MATRIX_CS, HIGH);
+
+  writeRegister(0x0F, 0x00);
+  writeRegister(0x09, 0x00);
+  writeRegister(0x0B, 0x07);
+  writeRegister(0x0A, 0x04);
+  writeRegister(0x0C, 0x01);
+  for (uint8_t row = 1; row <= 8; ++row) {
+    writeRegister(row, 0x00);
+  }
+  showDigit(0);
+}
+
+void showDigit(uint8_t digit) {
+  if (digit > 9) {
+    Serial.println("Chiffre MAX7219 invalide (0-9 attendu).");
+    return;
+  }
+
+  for (uint8_t row = 0; row < 8; ++row) {
+    writeRegister(row + 1, DIGIT_GLYPHS[digit][row]);
+  }
+}
+
+}

@@ -11,6 +11,7 @@
 #include "ui.h"
 #include "net.h"
 #include "core.h"
+#include "matrix_display.h"
 
 #if __has_include("secrets.h")
 #include "secrets.h"
@@ -38,17 +39,14 @@
 #define MQTT_ROOT_CA ""
 #endif
 
-constexpr uint8_t VIBRATION_PIN = 2;
-constexpr char VIBRATION_TOPIC[] = "esp32-devkit-v1/vibration/state";
+constexpr char MATRIX_COMMAND_TOPIC[] = "esp32-devkit-v1/matrix/command";
+constexpr char MATRIX_STATE_TOPIC[] = "esp32-devkit-v1/matrix/state";
 constexpr char STATUS_TOPIC[] = "esp32-devkit-v1/status";
 constexpr unsigned long RECONNECT_INTERVAL_MS = 5000;
-constexpr unsigned long VIBRATION_DEBOUNCE_MS = 20;
 
 WiFiClientSecure tlsClient;
 PubSubClient mqtt(tlsClient);
-bool vibrationDetected = false;
-bool vibrationCandidate = false;
-unsigned long vibrationCandidateSince = 0;
+uint8_t displayedDigit = 0;
 unsigned long lastReconnectAttempt = 0;
 
 bool configurationIsComplete() {
@@ -60,28 +58,28 @@ bool configurationIsComplete() {
          MQTT_ROOT_CA[0] != '\0';
 }
 
-void publishVibrationState() {
+void publishMatrixState() {
+  const char payload[] = {static_cast<char>('0' + displayedDigit), '\0'};
   if (mqtt.connected() &&
-      !mqtt.publish(VIBRATION_TOPIC, vibrationDetected ? "ON" : "OFF", true)) {
-    Serial.println("Publication MQTT de l'etat du capteur echouee.");
+      !mqtt.publish(MATRIX_STATE_TOPIC, payload, true)) {
+    Serial.println("Publication MQTT de l'etat de la matrice echouee.");
   }
 }
 
-void updateVibration() {
-  const bool reading = digitalRead(VIBRATION_PIN) == HIGH;
-  const unsigned long now = millis();
-
-  if (reading != vibrationCandidate) {
-    vibrationCandidate = reading;
-    vibrationCandidateSince = now;
+void onMqttMessage(char* topic, byte* payload, unsigned int length) {
+  if (strcmp(topic, MATRIX_COMMAND_TOPIC) != 0) {
+    return;
   }
 
-  if (reading != vibrationDetected &&
-      now - vibrationCandidateSince >= VIBRATION_DEBOUNCE_MS) {
-    vibrationDetected = reading;
-    Serial.printf("Vibration %s\n", vibrationDetected ? "detectee" : "terminee");
-    publishVibrationState();
+  if (length != 1 || payload[0] < '0' || payload[0] > '9') {
+    Serial.println("Commande matrice ignoree (un chiffre de 0 a 9 est attendu).");
+    return;
   }
+
+  displayedDigit = payload[0] - '0';
+  MatrixDisplay::showDigit(displayedDigit);
+  publishMatrixState();
+  Serial.printf("Chiffre %u affiche sur la matrice.\n", displayedDigit);
 }
 
 bool connectMqtt() {
@@ -96,18 +94,20 @@ bool connectMqtt() {
     return false;
   }
 
+  if (!mqtt.subscribe(MATRIX_COMMAND_TOPIC, 1)) {
+    Serial.println("Abonnement MQTT aux commandes de la matrice echoue.");
+    mqtt.disconnect();
+    return false;
+  }
+
   mqtt.publish(STATUS_TOPIC, "online", true);
-  publishVibrationState();
+  publishMatrixState();
   Serial.println("Connecte au broker MQTT.");
   return true;
 }
 
 void setup() {
   Serial.begin(115200);
-  pinMode(VIBRATION_PIN, INPUT);
-  vibrationDetected = digitalRead(VIBRATION_PIN) == HIGH;
-  vibrationCandidate = vibrationDetected;
-  vibrationCandidateSince = millis();
 
   settingsBegin();
   Sensors::begin();
@@ -115,6 +115,7 @@ void setup() {
   Turner::begin();
   Alarms::begin();
   Ui::begin();
+  MatrixDisplay::begin();
   Net::begin();
   Core::wdtBegin();
   Serial.println("Couveuse v" FW_VERSION " demarree");
@@ -127,6 +128,7 @@ void setup() {
   tlsClient.setCACert(MQTT_ROOT_CA);
   mqtt.setServer(MQTT_HOST, MQTT_PORT);
   mqtt.setSocketTimeout(2);
+  mqtt.setCallback(onMqttMessage);
   WiFi.mode(Net::apOn ? WIFI_AP_STA : WIFI_STA);
   WiFi.setAutoReconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -134,7 +136,6 @@ void setup() {
 }
 
 void loop() {
-  updateVibration();
   Sensors::update();
   Control::update();
   Turner::update();
