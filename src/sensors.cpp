@@ -7,7 +7,7 @@
 namespace Sensors {
 
 float temp = NAN, hum = NAN;
-bool dhtOk = true, rtcOk = false, limL = false, limR = false, waterOk = true;
+bool dhtOk = false, rtcOk = false, limL = false, limR = false, waterOk = true;
 
 static DHT dht(PIN_DHT22, DHT22);
 static RTC_DS3231 rtc;
@@ -58,7 +58,7 @@ void update() {
       temp = t; hum = h; lastValid = now;
     }
   }
-  dhtOk = (now - lastValid) < DHT_LOST_MS;
+  dhtOk = lastValid != 0 && (now - lastValid) < DHT_LOST_MS;
 
   limL = debounce(dL, rdL(), now);
   limR = debounce(dR, rdR(), now);

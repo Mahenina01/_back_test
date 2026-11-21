@@ -73,7 +73,7 @@ const calculerJourIncubation = (dateDebut, dateFin) => {
 
 
 export default function Dashboard() {
-  const { dernierMessage } = useLiveData();
+  const { dernierMessage, enLigne, directEsp32 } = useLiveData();
   const { execute, loading: apiLoading } = useApi();
   const { selectedIncubatorId, selectedIncubator } = useIncubator();
   const navigate = useNavigate();
@@ -91,6 +91,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
+      setStatus(null);
+      setMesures([]);
       if (!selectedIncubatorId) {
         setLoading(false);
         return;
@@ -122,12 +125,14 @@ export default function Dashboard() {
 
 
   useEffect(() => {
-    if (dernierMessage && dernierMessage.data) {
+    if (dernierMessage?.event === 'mesure' && dernierMessage.data) {
       setStatus(prev => ({
         ...prev,
         temperature: dernierMessage.data.temperature,
         humidite: dernierMessage.data.humidite,
         pwm_chauffage: dernierMessage.data.pwm_chauffage,
+        sensor_fault: dernierMessage.data.sensor_fault ?? prev?.sensor_fault,
+        en_ligne: true,
         date_debut_incubation: dernierMessage.data.date_debut_incubation ?? prev?.date_debut_incubation,
         date_fin_incubation: dernierMessage.data.date_fin_incubation ?? prev?.date_fin_incubation,
         alimentation: dernierMessage.data.alimentation ?? prev?.alimentation,
@@ -141,6 +146,21 @@ export default function Dashboard() {
 
 
   const data = status || {};
+  const latestReading = dernierMessage?.event === 'mesure' ? dernierMessage.data : null;
+  const hasLiveTelemetry = directEsp32
+    ? Boolean(
+        enLigne &&
+        latestReading &&
+        !latestReading.sensor_fault &&
+        Number.isFinite(latestReading.temperature) &&
+        Number.isFinite(latestReading.humidite)
+      )
+    : Boolean(
+        data.en_ligne &&
+        !data.sensor_fault &&
+        Number.isFinite(data.temperature) &&
+        Number.isFinite(data.humidite)
+      );
   const dateFinObjet = parseDate(data.date_fin_incubation);
   const dateDebutIncubation = formatDateLongue(data.date_debut_incubation);
   const dateFinIncubation = formatDateLongue(data.date_fin_incubation);
@@ -273,7 +293,7 @@ export default function Dashboard() {
   };
 
 
-  const chartData = mesures.length > 0
+  const chartData = hasLiveTelemetry && mesures.length > 0
     ? mesures.map(m => ({
         time: new Date(m.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
         temp: m.temperature,
@@ -291,9 +311,9 @@ export default function Dashboard() {
   }
 
   const actuators = [
-    { label: 'Ventilateur brassage', icon: Fan, state: data.etat_ventilateur_brassage },
-    { label: 'Ventilateur extraction', icon: Fan, state: data.etat_ventilateur_extraction },
-    { label: 'Pompe à eau', icon: Power, state: data.etat_pompe },
+    { label: 'Ventilateur brassage', icon: Fan, state: hasLiveTelemetry ? data.etat_ventilateur_brassage : null },
+    { label: 'Ventilateur extraction', icon: Fan, state: hasLiveTelemetry ? data.etat_ventilateur_extraction : null },
+    { label: 'Pompe à eau', icon: Power, state: hasLiveTelemetry ? data.etat_pompe : null },
   ];
 
   const surBatterie = data.alimentation === 'batterie';
@@ -430,33 +450,46 @@ export default function Dashboard() {
         <StatCard
           icon={Thermometer}
           label="Température"
-          value={`${data.temperature?.toFixed(1) || '--'}°C`}
-          subValue={`Consigne ${data.consigne_temperature || 37.5}°C`}
-          status={data.temperature > 38 ? 'warning' : 'on'}
-          statusLabel={data.temperature > 38 ? 'Alerte' : 'Normal'}
+          value={hasLiveTelemetry ? `${data.temperature.toFixed(1)}°C` : '—'}
+          subValue={hasLiveTelemetry && Number.isFinite(data.consigne_temperature)
+            ? `Consigne ${data.consigne_temperature}°C`
+            : null}
+          status={hasLiveTelemetry ? data.temperature > 38 ? 'warning' : 'on' : 'neutral'}
+          statusLabel={hasLiveTelemetry ? data.temperature > 38 ? 'Alerte' : 'Normal' : 'Aucune donnée'}
         />
         <StatCard
           icon={Droplets}
           label="Humidité"
-          value={`${data.humidite?.toFixed(1) || '--'}%`}
-          subValue={`Consigne ${data.consigne_humidite_min || 55}–${data.consigne_humidite_max || 60}%`}
-          status="on"
-          statusLabel="Normal"
+          value={hasLiveTelemetry ? `${data.humidite.toFixed(1)}%` : '—'}
+          subValue={hasLiveTelemetry && Number.isFinite(data.consigne_humidite_min)
+            && Number.isFinite(data.consigne_humidite_max)
+            ? `Consigne ${data.consigne_humidite_min}–${data.consigne_humidite_max}%`
+            : hasLiveTelemetry && Number.isFinite(data.consigne_humidite)
+              ? `Consigne ${data.consigne_humidite}%`
+            : null}
+          status={hasLiveTelemetry ? 'on' : 'neutral'}
+          statusLabel={hasLiveTelemetry ? 'Normal' : 'Aucune donnée'}
         />
         <StatCard
           icon={Zap}
           label="Chauffage"
-          value={`${data.pwm_chauffage || 0}%`}
+          value={hasLiveTelemetry && Number.isFinite(data.pwm_chauffage)
+            ? `${data.pwm_chauffage}%`
+            : '—'}
           subValue="PWM"
-          status={data.pwm_chauffage > 80 ? 'warning' : 'on'}
-          statusLabel={data.pwm_chauffage > 80 ? 'Intense' : 'Stable'}
+          status={hasLiveTelemetry ? data.pwm_chauffage > 80 ? 'warning' : 'on' : 'neutral'}
+          statusLabel={hasLiveTelemetry ? data.pwm_chauffage > 80 ? 'Intense' : 'Stable' : 'Aucune donnée'}
         />
         <StatCard
-          icon={data.niveau_eau === 'ok' ? CheckCircle : AlertTriangle}
+          icon={data.niveau_eau === 'ok' ? CheckCircle : hasLiveTelemetry ? AlertTriangle : Droplets}
           label="Niveau d'eau"
-          value={data.niveau_eau === 'ok' ? 'OK' : 'Bas'}
-          status={data.niveau_eau === 'ok' ? 'on' : 'danger'}
-          statusLabel={data.niveau_eau === 'ok' ? 'Suffisant' : 'Urgent'}
+          value={hasLiveTelemetry
+            ? data.niveau_eau === 'ok' ? 'OK' : data.niveau_eau === 'bas' ? 'Bas' : 'Vide'
+            : '—'}
+          status={hasLiveTelemetry ? data.niveau_eau === 'ok' ? 'on' : 'danger' : 'neutral'}
+          statusLabel={hasLiveTelemetry
+            ? data.niveau_eau === 'ok' ? 'Suffisant' : 'À vérifier'
+            : 'Aucune donnée'}
         />
       </div>
 
@@ -476,16 +509,20 @@ export default function Dashboard() {
               <div>
                 <p className="stat-label">Alimentation</p>
                 <p className="text-sm data-value mt-0.5">
-                  {surBatterie ? 'Batterie de secours' : 'Secteur'}
+                  {data.alimentation === 'batterie'
+                    ? 'Batterie de secours'
+                    : data.alimentation === 'secteur' ? 'Secteur' : '—'}
                 </p>
               </div>
             </div>
-            <span className={surBatterie ? 'badge-warning' : 'badge-on'}>
-              <span className={`status-dot ${surBatterie ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-ok)]'}`} />
-              {surBatterie ? 'Secours' : 'Normal'}
-            </span>
+            {hasLiveTelemetry && data.alimentation && (
+              <span className={surBatterie ? 'badge-warning' : 'badge-on'}>
+                <span className={`status-dot ${surBatterie ? 'bg-[var(--color-warn)]' : 'bg-[var(--color-ok)]'}`} />
+                {surBatterie ? 'Secours' : 'Normal'}
+              </span>
+            )}
           </div>
-          {surBatterie && data.hors_ligne_depuis && (
+          {hasLiveTelemetry && surBatterie && data.hors_ligne_depuis && (
             <p className="text-xs text-[var(--color-ink-faint)] mt-2">
               Coupure secteur depuis {new Date(data.hors_ligne_depuis).toLocaleString('fr-FR')}
             </p>
@@ -503,14 +540,16 @@ export default function Dashboard() {
                 <div>
                   <p className="stat-label">{a.label}</p>
                   <p className="text-sm data-value mt-0.5">
-                    {a.state === 'on' ? 'Actif' : 'Arrêté'}
+                    {a.state === 'on' ? 'Actif' : a.state === 'off' ? 'Arrêté' : '—'}
                   </p>
                 </div>
               </div>
-              <span className={a.state === 'on' ? 'badge-on' : 'badge-off'}>
-                <span className={`status-dot ${a.state === 'on' ? 'bg-[var(--color-ok)]' : 'bg-[var(--color-ink-faint)]'}`} />
-                {a.state === 'on' ? 'En marche' : 'Arrêté'}
-              </span>
+              {a.state && (
+                <span className={a.state === 'on' ? 'badge-on' : 'badge-off'}>
+                  <span className={`status-dot ${a.state === 'on' ? 'bg-[var(--color-ok)]' : 'bg-[var(--color-ink-faint)]'}`} />
+                  {a.state === 'on' ? 'En marche' : 'Arrêté'}
+                </span>
+              )}
             </div>
           </Card>
         ))}

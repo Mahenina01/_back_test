@@ -54,7 +54,7 @@ npm run build
 
 1. Envoyez le projet sur un dépôt GitHub et importez ce dépôt dans Vercel.
 2. Dans les réglages du projet Vercel, choisissez `web` comme **Root Directory**. Vercel détecte Vite ; la commande de build est `npm run build` et le dossier de sortie `dist`.
-3. Ajoutez `VITE_USE_MOCKS=true`, `VITE_MQTT_URL`, `VITE_MQTT_USERNAME` et `VITE_MQTT_PASSWORD` dans **Settings → Environment Variables**. Cochez **Production** (et **Preview** si nécessaire).
+3. Ajoutez `VITE_USE_MOCKS=false`, `VITE_API_URL`, `VITE_WS_URL`, `VITE_MQTT_URL`, `VITE_MQTT_USERNAME` et `VITE_MQTT_PASSWORD` dans **Settings → Environment Variables**. Cochez **Production** (et **Preview** si nécessaire).
 4. Lancez le déploiement. Chaque push ultérieur déclenchera automatiquement un nouveau déploiement.
 
 ### Avec la CLI Vercel (sans dépôt GitHub)
@@ -85,4 +85,4 @@ La configuration de l’écran TFT prévoit son signal D/C sur GPIO5. Ne modifie
 
 **Avant le téléversement :** les modules couveuse pilotent les sorties chauffage (GPIO25), ventilateur (GPIO26), humidificateur (GPIO27), pompe (GPIO17) et moteur (GPIO32/33), selon les capteurs et les réglages enregistrés. Vérifie le câblage, les relais et les sécurités avant de connecter des charges réelles.
 
-Le module réseau Cloud attend une API REST et des identifiants `CLOUD_*` distincts de la liaison MQTT de la matrice. Ils ne sont pas configurés ici ; les données de la couveuse ne sont donc pas encore envoyées à Vercel, dont le tableau de bord reste en mode démo.
+Le module réseau Cloud attend une API REST et des identifiants `CLOUD_*` distincts de la liaison MQTT de la matrice. Sans cette configuration et sans capteur fonctionnel, le tableau de bord n’affiche pas de mesures simulées : il indique qu’aucune donnée réelle n’est disponible.

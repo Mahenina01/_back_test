@@ -378,11 +378,12 @@ void update() {
     const char* eau = Control::water == Control::WTR_OK ? "OK" : Control::water == Control::WTR_LOW ? "BASSE" : "VIDE";
     char buf[220];
     snprintf(buf, sizeof buf,
-             "{\"t\":%.1f,\"ts\":%.1f,\"h\":%.1f,\"hs\":%.0f,\"pid\":%.0f,\"fan\":%d,\"hum\":%d,\"pump\":%d,\"eau\":\"%s\",\"al\":\"%s\",\"day\":%d}",
+             "{\"t\":%.1f,\"ts\":%.1f,\"h\":%.1f,\"hs\":%.0f,\"pid\":%.0f,\"fan\":%d,\"hum\":%d,\"pump\":%d,\"eau\":\"%s\",\"al\":\"%s\",\"day\":%d,\"sensor_fault\":%s}",
              isnan(Sensors::temp) ? 0.0f : Sensors::temp, Control::effTemp,
              isnan(Sensors::hum) ? 0.0f : Sensors::hum, Control::effHum,
              Control::pidOut, Control::fanOn ? 1 : 0, Control::humOn ? 1 : 0,
-             Control::pumpOn ? 1 : 0, eau, Alarms::name(Alarms::top()), Control::day);
+             Control::pumpOn ? 1 : 0, eau, Alarms::name(Alarms::top()), Control::day,
+             Sensors::dhtOk ? "false" : "true");
     ws.broadcastTXT(buf);
   }
 

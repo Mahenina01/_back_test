@@ -24,12 +24,14 @@ function normalizeEsp32Message(message) {
       consigne_humidite: message.hs,
       pwm_chauffage: message.pid,
       etat_ventilateur_brassage: message.fan ? "on" : "off",
-      etat_ventilateur_extraction: "off",
+      etat_ventilateur_extraction: null,
       etat_pompe: message.pump ? "on" : "off",
       etat_humidificateur: message.hum ? "on" : "off",
-      niveau_eau: message.eau,
+      niveau_eau: message.eau === "OK" ? "ok" : message.eau === "BASSE" ? "bas"
+        : message.eau === "VIDE" ? "vide" : null,
       alarme: message.al,
       jour_incubation: message.day,
+      sensor_fault: Boolean(message.sensor_fault),
     },
   };
 }
@@ -49,6 +51,9 @@ export function useLiveSocket() {
   const indexRef = useRef(0);
 
   useEffect(() => {
+    setDernierMessage(null);
+    setEnLigne(false);
+
     if (USE_MOCKS && !ESP32_WS_URL) {
       let annule = false;
       let intervalId;
