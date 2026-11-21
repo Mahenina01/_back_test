@@ -18,7 +18,7 @@
 #define PIN_I2C_SDA      21
 #define PIN_I2C_SCL      22
 
-#define PIN_MATRIX_CS   17
+#define PIN_MATRIX_CS   5
 #define PIN_MATRIX_DIN  23
 #define PIN_MATRIX_CLK  18
 
