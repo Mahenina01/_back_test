@@ -38,6 +38,7 @@ function App() {
                   <Route path="historique" element={<Historique />} />
                   <Route path="commandes" element={<Commandes />} />
                   <Route path="matrix" element={<MatrixControl />} />
+                  <Route path="led" element={<Navigate to="/matrix" replace />} />
                   <Route path="profils" element={<Profils />} />
                   <Route path="alarmes" element={<Alarmes />} />
                   <Route path="parametres" element={<Parametres />} />
