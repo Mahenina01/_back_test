@@ -22,7 +22,7 @@ import { useApi } from '../hooks/useApi';
 import { apiClient } from '../services/apiClient';
 
 const OVERRIDE_MS = 4000;
-const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
+const USE_MOCKS = import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true';
 
 export default function Commandes() {
   const { dernierMessage, directEsp32 } = useLiveData();

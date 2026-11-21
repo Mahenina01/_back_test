@@ -26,6 +26,8 @@ import { useAuth } from '../hooks/useAuth';
 import ChickIcon from './ChickIcon';
 import IncubatorSelector from './IncubatorSelector';
 
+const USE_MOCKS = import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true';
+
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
   { path: '/synoptique', icon: Egg, label: 'Synoptique' },
@@ -98,8 +100,8 @@ export default function Layout() {
           { }
           <div className="px-4 pt-4 space-y-3">
             <div className="flex items-center justify-between rounded-xl border border-[var(--color-line)] bg-[var(--color-bg)] px-3 py-2.5">
-              <span className={`status-dot ${import.meta.env.VITE_USE_MOCKS === 'true' ? 'bg-[var(--color-warn)]' : enLigne ? 'bg-[var(--color-ok)]' : 'bg-[var(--color-crit)]'}`} />
-              {import.meta.env.VITE_USE_MOCKS === 'true' ? (
+              <span className={`status-dot ${USE_MOCKS ? 'bg-[var(--color-warn)]' : enLigne ? 'bg-[var(--color-ok)]' : 'bg-[var(--color-crit)]'}`} />
+              {USE_MOCKS ? (
                 <span className="text-xs text-[var(--color-warn)] font-medium">Mesures de démonstration</span>
               ) : enLigne ? (
                 <span className="text-xs text-[var(--color-ok)] font-medium">Données couveuse connectées</span>

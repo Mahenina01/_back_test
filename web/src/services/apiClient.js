@@ -1,5 +1,5 @@
 const BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
-const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
+const USE_MOCKS = import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === "true";
 const AUTH_STORAGE_KEY = "smart_incubator_auth";
 
 function getToken() {
@@ -12,8 +12,10 @@ function getToken() {
 
 export function normalizeReading(reading) {
   if (!reading) return null;
+  const sensorFault = reading.sensor_fault !== false;
   return {
     ...reading,
+    sensor_fault: sensorFault,
     humidite: reading.humidity ?? reading.humidite,
     pwm_chauffage: reading.heating_pwm ?? reading.pwm_chauffage,
     etat_ventilateur_brassage: reading.mixing_fan_on ? "on" : "off",
@@ -23,7 +25,7 @@ export function normalizeReading(reading) {
     niveau_eau_vide: Boolean(reading.water_level_empty),
     niveau_eau: reading.water_level_empty ? "vide" : reading.water_level_low ? "bas" : "ok",
     defaut_moteur: Boolean(reading.motor_fault),
-    defaut_sonde: Boolean(reading.sensor_fault),
+    defaut_sonde: sensorFault,
   };
 }
 

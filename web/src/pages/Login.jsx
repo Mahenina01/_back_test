@@ -4,6 +4,8 @@ import { AlertCircle, ShieldCheck, Eye, EyeOff, ArrowRight, CheckCircle2, Mail, 
 import ChickIcon from '../components/ChickIcon';
 import { useAuth } from '../hooks/useAuth';
 
+const USE_MOCKS = import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true';
+
 export default function Login() {
   const [mode, setMode] = useState('login');
   const [fullName, setFullName] = useState('');
@@ -65,7 +67,7 @@ export default function Login() {
           <p className="auth-kicker">ESPACE SÉCURISÉ</p>
           <h2>{mode === 'login' ? 'Bon retour parmi nous.' : 'Créez votre espace.'}</h2>
           <p className="auth-intro">{mode === 'login' ? 'Connectez-vous pour retrouver le suivi de vos couveuses.' : 'Inscrivez-vous pour gérer vos couveuses en temps réel.'}</p>
-          {import.meta.env.VITE_USE_MOCKS === 'true' && (
+          {USE_MOCKS && (
             <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">
               Mode démonstration : ce compte sera enregistré uniquement dans ce navigateur et n’est pas synchronisé avec Netlify.
             </p>

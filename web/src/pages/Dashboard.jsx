@@ -73,7 +73,7 @@ const calculerJourIncubation = (dateDebut, dateFin) => {
 
 
 export default function Dashboard() {
-  const { dernierMessage, enLigne, directEsp32 } = useLiveData();
+  const { dernierMessage, derniereMesure, enLigne } = useLiveData();
   const { execute, loading: apiLoading } = useApi();
   const { selectedIncubatorId, selectedIncubator } = useIncubator();
   const navigate = useNavigate();
@@ -146,21 +146,14 @@ export default function Dashboard() {
 
 
   const data = status || {};
-  const latestReading = dernierMessage?.event === 'mesure' ? dernierMessage.data : null;
-  const hasLiveTelemetry = directEsp32
-    ? Boolean(
-        enLigne &&
-        latestReading &&
-        !latestReading.sensor_fault &&
-        Number.isFinite(latestReading.temperature) &&
-        Number.isFinite(latestReading.humidite)
-      )
-    : Boolean(
-        data.en_ligne &&
-        !data.sensor_fault &&
-        Number.isFinite(data.temperature) &&
-        Number.isFinite(data.humidite)
-      );
+  const latestReading = derniereMesure?.data;
+  const hasLiveTelemetry = Boolean(
+    enLigne &&
+    latestReading &&
+    !latestReading.sensor_fault &&
+    Number.isFinite(latestReading.temperature) &&
+    Number.isFinite(latestReading.humidite)
+  );
   const dateFinObjet = parseDate(data.date_fin_incubation);
   const dateDebutIncubation = formatDateLongue(data.date_debut_incubation);
   const dateFinIncubation = formatDateLongue(data.date_fin_incubation);

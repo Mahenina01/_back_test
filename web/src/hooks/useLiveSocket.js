@@ -4,7 +4,8 @@ import { useAuth } from "./useAuth";
 import { useIncubator } from "../context/IncubatorContext";
 import { getToken, normalizeReading } from "../services/apiClient";
 
-const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
+const USE_MOCKS = import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === "true";
+const READING_STALE_TIMEOUT_MS = 15000;
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
 const WS_BASE_URL = (import.meta.env.VITE_WS_URL || API_URL.replace(/^http/, "ws")).replace(/\/$/, "");
 const ESP32_WS_URL = import.meta.env.VITE_ESP32_WS_URL;
@@ -31,7 +32,7 @@ function normalizeEsp32Message(message) {
         : message.eau === "VIDE" ? "vide" : null,
       alarme: message.al,
       jour_incubation: message.day,
-      sensor_fault: Boolean(message.sensor_fault),
+      sensor_fault: message.sensor_fault !== false,
     },
   };
 }
@@ -47,12 +48,27 @@ export function useLiveSocket() {
   const { user } = useAuth();
   const { selectedIncubatorId } = useIncubator();
   const [dernierMessage, setDernierMessage] = useState(null);
+  const [derniereMesure, setDerniereMesure] = useState(null);
   const [enLigne, setEnLigne] = useState(false);
   const indexRef = useRef(0);
+  const readingTimeoutRef = useRef(null);
 
   useEffect(() => {
     setDernierMessage(null);
+    setDerniereMesure(null);
     setEnLigne(false);
+    clearTimeout(readingTimeoutRef.current);
+
+    const acceptMessage = (message) => {
+      setDernierMessage(message);
+      if (message?.event !== "mesure") return;
+
+      setDerniereMesure(message);
+      clearTimeout(readingTimeoutRef.current);
+      readingTimeoutRef.current = setTimeout(() => {
+        setDerniereMesure(null);
+      }, READING_STALE_TIMEOUT_MS);
+    };
 
     if (USE_MOCKS && !ESP32_WS_URL) {
       let annule = false;
@@ -63,7 +79,7 @@ export function useLiveSocket() {
         setEnLigne(true);
         intervalId = setInterval(() => {
           if (annule) return;
-          setDernierMessage(evenements[indexRef.current % evenements.length]);
+          acceptMessage(evenements[indexRef.current % evenements.length]);
           indexRef.current += 1;
         }, 3000);
       }).catch((error) => {
@@ -73,6 +89,7 @@ export function useLiveSocket() {
       return () => {
         annule = true;
         clearInterval(intervalId);
+        clearTimeout(readingTimeoutRef.current);
       };
     }
 
@@ -87,7 +104,7 @@ export function useLiveSocket() {
     socket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        setDernierMessage(ESP32_WS_URL
+        acceptMessage(ESP32_WS_URL
           ? normalizeEsp32Message(message)
           : normalizeBackendMessage(message));
       } catch (error) {
@@ -95,13 +112,20 @@ export function useLiveSocket() {
       }
     };
     socket.onopen = () => setEnLigne(true);
-    socket.onclose = () => setEnLigne(false);
+    socket.onclose = () => {
+      setEnLigne(false);
+      setDerniereMesure(null);
+      clearTimeout(readingTimeoutRef.current);
+    };
     socket.onerror = (error) => {
       console.error("Erreur de connexion WebSocket :", error);
       setEnLigne(false);
     };
-    return () => socket.close();
+    return () => {
+      socket.close();
+      clearTimeout(readingTimeoutRef.current);
+    };
   }, [selectedIncubatorId, user]);
 
-  return { dernierMessage, enLigne, directEsp32: Boolean(ESP32_WS_URL) };
+  return { dernierMessage, derniereMesure, enLigne, directEsp32: Boolean(ESP32_WS_URL) };
 }
