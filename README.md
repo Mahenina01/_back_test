@@ -1,10 +1,10 @@
-# Affichage de chiffre sur une matrice MAX7219 avec React et MQTT
+# Supervision de Couveuse Automatique ESP32 avec React et MQTT
 
-Le firmware ESP32 rejoint votre Wi-Fi et un broker MQTT TLS. L’application React utilise MQTT sur WebSocket sécurisé (WSS). La page web envoie un chiffre de 0 à 9 via le broker et l’ESP32 l’affiche sur la matrice MAX7219, sans exposer de port entrant sur le routeur.
+Le firmware ESP32 rejoint votre Wi-Fi et un broker MQTT TLS. L’application React utilise MQTT sur WebSocket sécurisé (WSS) et communique avec le backend de la couveuse.
 
 ## Interface de couveuse
 
-L’application utilise le backend configuré par `VITE_API_URL` pour l’authentification et les données de couveuse. Le mode de démonstration est désactivé par défaut (`VITE_USE_MOCKS=false`) : sans backend disponible, les données ne sont pas remplacées par des valeurs fictives. La page « Matrice MAX7219 » permet d’envoyer un chiffre à la matrice connectée à l’ESP32.
+L’application utilise le backend configuré par `VITE_API_URL` pour l’authentification et les données de couveuse. Le mode de démonstration est désactivé par défaut (`VITE_USE_MOCKS=false`) : sans backend disponible, les données ne sont pas remplacées par des valeurs fictives.
 
 L’inscription et la connexion passent par le backend réel. Les mesures réelles nécessitent que ce backend soit configuré et alimenté par l’équipement ; le mode démo ne constitue pas une source de données.
 
@@ -17,7 +17,7 @@ Créez un broker MQTT qui fournit :
 - un certificat CA racine pour vérifier le certificat TLS côté ESP32 ;
 - des utilisateurs et ACL distincts pour le firmware et le navigateur.
 
-Utilisez les topics `esp32-devkit-v1/matrix/command`, `esp32-devkit-v1/matrix/state` et `esp32-devkit-v1/status`. Autorisez l’utilisateur de la carte à s’abonner à `esp32-devkit-v1/matrix/command` et à publier sur les deux autres topics. L’utilisateur web doit pouvoir publier sur `esp32-devkit-v1/matrix/command` et s’abonner à `esp32-devkit-v1/matrix/state` et `esp32-devkit-v1/status`.
+Utilisez le topic `esp32-devkit-v1/status`. Autorisez l’utilisateur de la carte à publier sur ce topic. L’utilisateur web doit pouvoir s’abonner à `esp32-devkit-v1/status`.
 
 **Important :** les identifiants `VITE_MQTT_*` de l’application web sont intégrés aux fichiers JavaScript et visibles par les visiteurs. Pour ce prototype, utilisez un compte dédié à faible privilège, limité à ces topics et à cette carte ; ne mettez jamais un compte administrateur ou des identifiants réutilisés dans l’application. Pour un déploiement public durable, placez l’authentification derrière un backend.
 
