@@ -1,8 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import mqtt from 'mqtt';
 
-const matrixCommandTopic = 'esp32-devkit-v1/matrix/command';
-const matrixStateTopic = 'esp32-devkit-v1/matrix/state';
 const statusTopic = 'esp32-devkit-v1/status';
 const mqttUrl = import.meta.env.VITE_MQTT_URL;
 const mqttUsername = import.meta.env.VITE_MQTT_USERNAME;
@@ -15,7 +13,6 @@ export function MqttProvider({ children }) {
   const [connection, setConnection] = useState('Connexion en cours');
   const [connected, setConnected] = useState(false);
   const [deviceStatus, setDeviceStatus] = useState('inconnu');
-  const [displayedDigit, setDisplayedDigit] = useState(null);
 
   useEffect(() => {
     if (!mqttUrl || !mqttUsername || !mqttPassword) {
@@ -35,7 +32,7 @@ export function MqttProvider({ children }) {
     clientRef.current = client;
 
     client.on('connect', () => {
-      client.subscribe([matrixStateTopic, statusTopic], (error) => {
+      client.subscribe([statusTopic], (error) => {
         if (error) {
           setConnection('Échec de l’abonnement MQTT');
           setConnected(false);
@@ -65,8 +62,6 @@ export function MqttProvider({ children }) {
       const value = message.toString();
       if (topic === statusTopic) {
         setDeviceStatus(value);
-      } else if (topic === matrixStateTopic && /^[0-9]$/.test(value)) {
-        setDisplayedDigit(Number(value));
       }
     });
 
@@ -76,29 +71,8 @@ export function MqttProvider({ children }) {
     };
   }, []);
 
-  const publishMatrixDigit = useCallback((digit) => new Promise((resolve, reject) => {
-    if (!Number.isInteger(digit) || digit < 0 || digit > 9) {
-      reject(new Error('Saisissez un chiffre de 0 à 9.'));
-      return;
-    }
-
-    const client = clientRef.current;
-    if (!client?.connected) {
-      reject(new Error('Le broker MQTT n’est pas connecté.'));
-      return;
-    }
-
-    client.publish(matrixCommandTopic, String(digit), { qos: 1, retain: false }, (error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve();
-    });
-  }), []);
-
   return (
-    <MqttContext.Provider value={{ connection, connected, deviceStatus, displayedDigit, publishMatrixDigit }}>
+    <MqttContext.Provider value={{ connection, connected, deviceStatus }}>
       {children}
     </MqttContext.Provider>
   );

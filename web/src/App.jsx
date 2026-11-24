@@ -16,7 +16,6 @@ import Alarmes from './pages/Alarmes';
 import Commandes from './pages/Commandes';
 import Dashboard from './pages/Dashboard';
 import Historique from './pages/Historique';
-import MatrixControl from './pages/MatrixControl';
 import Login from './pages/Login';
 import Parametres from './pages/parametres';
 import Profils from './pages/Profils';
@@ -37,8 +36,6 @@ function App() {
                   <Route path="synoptique" element={<Synoptique />} />
                   <Route path="historique" element={<Historique />} />
                   <Route path="commandes" element={<Commandes />} />
-                  <Route path="matrix" element={<MatrixControl />} />
-                  <Route path="led" element={<Navigate to="/matrix" replace />} />
                   <Route path="profils" element={<Profils />} />
                   <Route path="alarmes" element={<Alarmes />} />
                   <Route path="parametres" element={<Parametres />} />
