@@ -23,8 +23,7 @@ constexpr uint8_t DIGIT_GLYPHS[10][8] = {
 };
 
 MD_MAX72XX matrix(MD_MAX72XX::FC16_HW,
-                  PIN_MATRIX_DIN, PIN_MATRIX_CLK, PIN_MATRIX_CS,
-                  MAX_DEVICES);
+                  PIN_MATRIX_CS, MAX_DEVICES);
 
 }
 
